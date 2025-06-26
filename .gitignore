@@ -1,0 +1,10 @@
+# Ignore virtual environment
+backend/venv/
+
+# Ignore datasets (all files inside the datasets folder)
+backend/datasets/
+
+# Ignore system files (optional good practice)
+*.pyc
+__pycache__/
+.DS_Store

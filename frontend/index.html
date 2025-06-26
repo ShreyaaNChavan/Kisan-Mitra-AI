@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kisan Mitra AI</title>
+    <link rel="stylesheet" href="/frontend/CSS/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Quicksand:wght@500&display=swap"
+        rel="stylesheet">
+
+
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <img src="/frontend/Images/growth.png" alt="Kisan Icon" class="navbar-icon" />
+            Kisan Mitra AI
+        </div>
+        <ul class="navbar-links" id="navbarLinks">
+            <li><a href="#crop-section"><i class="fas fa-seedling"></i> Crop Recommendation</a></li>
+            <li><a href="#crop-disease"><i class="fas fa-microscope"></i> Crop Disease Detection</a></li>
+            <li><a href="#yield"><i class="fas fa-chart-line"></i> Yield Prediction</a></li>
+            <li><a href="#weather"><i class="fas fa-cloud-sun"></i> Weather</a></li>
+            <li><a href="#chatboat"><i class="fa-regular fa-handshake"></i> Kisan Mitra</a></li>
+        </ul>
+
+        <div class="navbar-toggle" id="toggleButton">&#9776;</div>
+    </nav>
+
+
+    <!-- Sections (just placeholders) -->
+    <!-- <section id="crop-section"></section>
+    <section id="crop-disease"></section>
+    <section id="yield"></section>
+    <section id="weather"></section>
+    <section id="cattle"></section> -->
+
+
+    <!-- HERO SECTION -->
+    <header class="hero">
+        <div class="hero-content">
+            <img src="/frontend/Images/growth.png" alt="Kisan Mitra Logo" class="hero-logo" />
+
+            <h1>Kisan Mitra AI</h1>
+
+            <p class="hero-description">
+                <strong>Smart Farming Made Simple with Generative AI</strong><br />
+                Use AI to make better farming decisions, detect crop diseases early, and maximize your yield with our
+                project — <strong>Kisan Mitra AI</strong>.
+            </p>
+
+            <button onclick="scrollToChat()">Get Started</button>
+        </div>
+    </header>
+
+
+    <section class="crop-section" id="crop-section">
+        <h2><i class="fa-solid fa-wheat-awn"></i> Crop Recommendation System</h2>
+
+        <form id="cropForm" class="form-grid">
+            <input type="number" step="any" name="N" placeholder="Nitrogen (N)" required>
+            <input type="number" step="any" name="P" placeholder="Phosphorous (P)" required>
+            <input type="number" step="any" name="K" placeholder="Potassium (K)" required>
+            <input type="number" step="any" name="temperature" placeholder="Temperature (°C)" required>
+            <input type="number" step="any" name="humidity" placeholder="Humidity (%)" required>
+            <input type="number" step="any" name="ph" placeholder="pH Level" required>
+            <input type="number" step="any" name="rainfall" placeholder="Rainfall (mm)" required>
+        </form>
+        <button onclick="submitCropForm()">Recommend Crop</button>
+        <div id="crop-result"></div>
+        <!-- Recommended Crop Card (Hidden by default) -->
+        <div id="cropCard" class="crop-card hidden">
+            <img src="/frontend/Images/crop.png" alt="Crop Image" />
+            <div class="card-body">
+                <h5>Recommended Crop for Cultivation is:</h5>
+                <p id="cropName">---</p>
+            </div>
+        </div>
+
+    </section>
+
+
+    <section id="crop-disease">
+        <h2><i class="fas fa-microscope"></i> Crop Disease Detection</h2>
+
+        <form id="diseaseForm">
+            <input type="file" id="imageInput" accept="image/*" required>
+            <button type="submit">Detect Disease</button>
+        </form>
+
+        <div id="diseaseResult"></div>
+        <div id="treatmentInfo"></div>
+    </section>
+
+
+
+
+    <section id="yield">
+        <h2><i class="fas fa-chart-area"></i> Yield Prediction</h2>
+
+        <form id="yieldForm" onsubmit="event.preventDefault(); submitYieldForm();">
+            <input id="rainfall" type="number" placeholder="Rainfall (mm)" required>
+            <input id="soil_quality" type="number" placeholder="Soil Quality Index" required>
+            <input id="farm_size" type="number" placeholder="Farm Size (hectares)" required>
+            <input id="sunlight" type="number" placeholder="Sunlight (hours)" required>
+            <input id="fertilizer" type="number" placeholder="Fertilizer (kg)" required>
+            <button type="submit">Predict Yield</button>
+        </form>
+        <!-- Loading Spinner (hidden by default) -->
+        <div id="yieldLoader" class="loader hidden"></div>
+
+        <div class="chart-container">
+            <canvas id="inputChart"></canvas>
+        </div>
+        <!-- Yield Summary & Suggestions -->
+        <div id="yieldInsights" style="margin-top: 30px;">
+            <div id="perHectare" style="font-weight: bold; font-size: 16px;"></div>
+            <div id="recommendations" style="margin-top: 15px;">
+                <h3>AI Suggestions</h3>
+                <div id="suggestionCards" class="card-container"></div>
+
+            </div>
+        </div>
+
+
+
+        <div id="predictedYield" style="margin-top: 20px; font-weight: bold;"></div>
+    </section>
+
+
+    <section id="weather">
+        <h1><i class="fa-solid fa-smog"></i> Know Your Weather</h1>
+        <div class="container">
+            <div class="weather_input">
+                <h3>Enter a City Name :</h3>
+                <input class="city-input" type="text" placeholder="E.g.,Pune , Bombay">
+                <button class="search-btn">Search</button>
+                <div class="separator"></div>
+                <button class="location-btn">Use Current Location</button>
+            </div>
+            <div class="weather-data">
+                <div class="current-weather">
+                    <div class="details">
+                        <h2>________ (______________)</h2>
+                        <h4>Temp : ____°C </h4>
+                        <h4>Wind : ____M/S</h4>
+                        <h4>Humidity :__%</h4>
+                    </div>
+
+
+                </div>
+                <div class="days-forecast">
+                    <h2>5-Day Forecast</h2>
+                    <ul class="weather-cards">
+                        <li class="card">
+                            <h3>(_________)</h3>
+                            <h4>Temp : ____°C </h4>
+                            <h4>Wind : ____M/S</h4>
+                            <h4>Humidity :__%</h4>
+                        </li>
+
+                        <li class="card">
+                            <h3>(_________)</h3>
+                            <h4>Temp : ____°C </h4>
+                            <h4>Wind : ____M/S</h4>
+                            <h4>Humidity :__%</h4>
+                        </li>
+
+                        <li class="card">
+                            <h3>(_________)</h3>
+                            <h4>Temp : ____°C </h4>
+                            <h4>Wind : ____M/S</h4>
+                            <h4>Humidity :__%</h4>
+                        </li>
+
+                        <li class="card">
+                            <h3>(_________)</h3>
+                            <h4>Temp : ____°C </h4>
+                            <h4>Wind : ____M/S</h4>
+                            <h4>Humidity :__%</h4>
+                        </li>
+
+                        <li class="card">
+                            <h3>(_________)</h3>
+                            <h4>Temp : ____°C </h4>
+                            <h4>Wind : ____M/S</h4>
+                            <h4>Humidity :__%</h4>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- Chatboat Section -->
+    <section id="chatboat">
+        <h2><i class="fas fa-robot"></i> Agri Assistant - Your Smart Farming Companion</h2>
+    
+        <div id="chatContainer">
+            <div id="chatOutput"></div>
+
+            <input type="text" id="userInput" placeholder="Ask your question...">
+            <button onclick="processQuery()">Send</button>
+        </div>
+    </section>
+
+
+
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <img src="/frontend/Images/growth.png" alt="Kisan Mitra Logo" class="footer-logo">
+                <h3>Kisan Mitra AI</h3>
+                <p>Empowering Indian Farmers with Smart & Sustainable Farming Decisions</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#crop-section"><i class="fas fa-seedling"></i> Crop Recommendation</a></li>
+                    <li><a href="#crop-disease"><i class="fas fa-microscope"></i> Disease Detection</a></li>
+                    <li><a href="#yield"><i class="fas fa-chart-line"></i> Yield Prediction</a></li>
+                    <li><a href="#weather"><i class="fas fa-cloud-sun"></i> Weather</a></li>
+                    <li><a href="#chatboat"><i class="fa-regular fa-handshake"></i> Kisan Mitra</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-contact">
+                <h4>Contact</h4>
+                <p><i class="fas fa-envelope"></i> support@kisanmitra.ai</p>
+                <p><i class="fas fa-phone"></i> +91 98765 43210</p>
+                <p><i class="fas fa-map-marker-alt"></i> Pune, Maharashtra</p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2025 Kisan Mitra AI. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button onclick="scrollToTop()" id="scrollTopBtn" title="Go to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+
+
+
+
+
+
+    <script src="/frontend/JS/script.js"></script>
+</body>
+
+</html>
