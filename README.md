@@ -4,7 +4,7 @@ Kisan Mitra AI is an intelligent web-based AgriTech assistant designed to help f
 
 ---
 
-## 🚀 Features
+## Features :
 
  1. **Crop Recommendation System**  
   Suggests the best crop based on soil nutrients, temperature, pH, rainfall, etc.
