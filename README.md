@@ -1,4 +1,4 @@
-# 🌾 Kisan Mitra AI – Smart Farming Assistant:
+# 🌾 Kisan Mitra AI – Smart Farming Assistant
 
 Kisan Mitra AI is an intelligent web-based AgriTech assistant designed to help farmers make better decisions using AI. This platform empowers agriculture with data-driven insights.
 
