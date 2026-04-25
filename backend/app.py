@@ -15,14 +15,16 @@ import torch
 from torchvision import transforms
 from PIL import Image
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__)
 CORS(app)
 
 # --- Load Models and Scalers ---
-with open("models/model.pkl", "rb") as f:
+with open(os.path.join(BASE_DIR, "models", "model.pkl"), "rb") as f:
     crop_model = pickle.load(f)
 
-with open("models/minmaxscaler.pkl", "rb") as f:
+with open(os.path.join(BASE_DIR, "models", "minmaxscaler.pkl"), "rb") as f:
     crop_scaler = pickle.load(f)
 
 # Later you can add more models like:
@@ -105,7 +107,10 @@ import torch.nn as nn
 # Define the model architecture
 disease_model = models.resnet18(weights=None)
 disease_model.fc = nn.Linear(disease_model.fc.in_features, 21)  # 21 classes
-disease_model.load_state_dict(torch.load("models/plant_disease_resnet18.pth", map_location=torch.device('cpu')))
+disease_model.load_state_dict(
+    torch.load(os.path.join(BASE_DIR, "models", "plant_disease_resnet18.pth"),
+               map_location=torch.device('cpu'))
+)
 disease_model.eval()
 
 
@@ -167,8 +172,7 @@ def detect_disease():
 
 
 
-
-with open("plant_disease.json", "r") as f:
+with open(os.path.join(BASE_DIR, "plant_disease.json"), "r") as f:
     treatment_data = json.load(f)
 
 # Convert list to dictionary for fast lookup
@@ -194,4 +198,5 @@ def suggest_treatment():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
