@@ -1,54 +1,82 @@
 # backend/app.py
-from flask_cors import CORS
-from flask import Flask, request, jsonify
-import pickle
-import numpy as np
 
-from flask import Flask, request, jsonify, render_template, send_from_directory, redirect
-import json
-import uuid
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
+import json
+import numpy as np
+import pickle
 import joblib
 
-
-import torch
-from torchvision import transforms
 from PIL import Image
+import torch
+from torchvision import transforms, models
+import torch.nn as nn
 
+# ---------------- BASIC SETUP ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Load Models and Scalers ---
+# ---------------- LOAD LIGHT MODELS (SAFE) ----------------
+
 with open(os.path.join(BASE_DIR, "models", "model.pkl"), "rb") as f:
     crop_model = pickle.load(f)
 
 with open(os.path.join(BASE_DIR, "models", "minmaxscaler.pkl"), "rb") as f:
     crop_scaler = pickle.load(f)
 
-# Later you can add more models like:
-# with open("models/yield_model.pkl", "rb") as f:
-#     yield_model = pickle.load(f)
+yield_model = joblib.load(os.path.join(BASE_DIR, "models", "crop_yield_model.pkl"))
 
-# --- Crop Recommendation API ---
+# ---------------- LAZY LOAD HEAVY MODEL ----------------
+
+disease_model = None
+
+def load_disease_model():
+    global disease_model
+    if disease_model is None:
+        try:
+            model = models.resnet18(weights=None)
+            model.fc = nn.Linear(model.fc.in_features, 21)
+
+            model.load_state_dict(
+                torch.load(
+                    os.path.join(BASE_DIR, "models", "plant_disease_resnet18.pth"),
+                    map_location=torch.device("cpu")
+                )
+            )
+
+            model.eval()
+            disease_model = model
+            print("Disease model loaded successfully")
+
+        except Exception as e:
+            print("Error loading disease model:", e)
+
+# ---------------- TRANSFORM ----------------
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
+
+# ---------------- CROP PREDICTION ----------------
+
 @app.route("/predict_crop", methods=["POST"])
 def predict_crop():
     try:
         data = request.json
 
-        # Extract features from request
         features = np.array([[data["N"], data["P"], data["K"],
                               data["temperature"], data["humidity"],
                               data["ph"], data["rainfall"]]])
 
-        # Scale input
         scaled = crop_scaler.transform(features)
-
-        # Predict numeric label
         prediction = crop_model.predict(scaled)
 
-        # Mapping numeric label to actual crop name
         crop_mapping = {
             0: "apple", 1: "banana", 2: "blackgram", 3: "chickpea", 4: "coconut",
             5: "coffee", 6: "cotton", 7: "grapes", 8: "jute", 9: "kidneybeans",
@@ -57,25 +85,16 @@ def predict_crop():
             20: "rice", 21: "watermelon", 22: "wheat"
         }
 
-        crop_index = prediction[0]
-        crop_name = crop_mapping.get(crop_index, "Unknown")
-
-        return jsonify({"recommended_crop": crop_name})
+        return jsonify({
+            "recommended_crop": crop_mapping.get(prediction[0], "Unknown")
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
-# --- Future API: Yield Prediction ---
-# @app.route("/predict_yield", methods=["POST"])
-# def predict_yield():
-#     # Load & use yield model here
-#     return jsonify({"predicted_yield": "Coming soon"})
-# --- Load Yield Model ---
+# ---------------- YIELD PREDICTION ----------------
 
-import joblib  # Add this import at the top if not already present
-yield_model = joblib.load("models/crop_yield_model.pkl")
-# --- Yield Prediction API ---
 @app.route("/predict_yield", methods=["POST"])
 def predict_yield():
     try:
@@ -88,33 +107,15 @@ def predict_yield():
                               data["fertilizer_kg"]]])
 
         prediction = yield_model.predict(features)
+
         return jsonify({"predicted_yield": round(prediction[0], 2)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
-# --- Future API: Crop Disease Detection ---
-# @app.route("/detect_disease", methods=["POST"])
-# def detect_disease():
-#     return jsonify({"disease": "Coming soon"})
-# ---------------- Plant Disease Detection ----------------
+# ---------------- DISEASE CLASSES ----------------
 
-
-from torchvision import models
-import torch.nn as nn
-
-# Define the model architecture
-disease_model = models.resnet18(weights=None)
-disease_model.fc = nn.Linear(disease_model.fc.in_features, 21)  # 21 classes
-disease_model.load_state_dict(
-    torch.load(os.path.join(BASE_DIR, "models", "plant_disease_resnet18.pth"),
-               map_location=torch.device('cpu'))
-)
-disease_model.eval()
-
-
-# === STEP 3: Define Class Index to Name Mapping ===
 disease_classes = {
     0: 'Apple___Apple_scab',
     1: 'Apple___Black_rot',
@@ -139,19 +140,16 @@ disease_classes = {
     20: 'Tomato___healthy'
 }
 
+# ---------------- DISEASE PREDICTION ----------------
 
-# === STEP 4: Define Image Transformations ===
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
-])
-
-# === STEP 5: Define Disease Prediction Endpoint ===
 @app.route("/detect_disease", methods=["POST"])
 def detect_disease():
     try:
+        load_disease_model()  # lazy load
+
+        if disease_model is None:
+            return jsonify({"error": "Model not available"}), 500
+
         if 'image' not in request.files:
             return jsonify({"error": "No image uploaded"}), 400
 
@@ -162,40 +160,43 @@ def detect_disease():
         with torch.no_grad():
             outputs = disease_model(input_tensor)
             _, predicted = torch.max(outputs, 1)
-            class_id = predicted.item()
 
-        disease = disease_classes.get(class_id, "Unknown")
+        disease = disease_classes.get(predicted.item(), "Unknown")
+
         return jsonify({"disease": disease})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
+# ---------------- TREATMENT ----------------
 
 with open(os.path.join(BASE_DIR, "plant_disease.json"), "r") as f:
     treatment_data = json.load(f)
 
-# Convert list to dictionary for fast lookup
 treatment_lookup = {entry["name"]: entry for entry in treatment_data}
+
 @app.route("/suggest_treatment", methods=["POST"])
 def suggest_treatment():
     try:
-        data = request.json
-        disease = data.get("disease")
+        disease = request.json.get("disease")
 
         info = treatment_lookup.get(disease)
 
         if not info:
-            return jsonify({"error": f"No data found for disease '{disease}'"}), 404
+            return jsonify({"error": "No data found"}), 404
 
         return jsonify({
             "disease": disease,
-            "cause": info.get("cause", "Not available"),
-            "cure": info.get("cure", "Not available")
+            "cause": info.get("cause"),
+            "cure": info.get("cure")
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------- RUN ----------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
