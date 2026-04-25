@@ -6,22 +6,8 @@ numpy
 pandas
 scikit-learn
 
-matplotlib
-seaborn
-
-requests
-joblib
-
 Pillow
 opencv-python
 
-nltk
-spacy
-transformers
-sentence-transformers
-
-tensorflow
-keras
-
-torch
-torchvision
+requests
+joblib
